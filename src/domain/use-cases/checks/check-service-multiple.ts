@@ -1,20 +1,25 @@
-import { e_LogSeverityLevel, LogModel } from '../../models/log.model';
+import { e_LogSeverityLevel, LogModel, LogModelOptions } from '../../models/log.model';
 import { LogRepository } from '../../repository/log.repository';
-interface CheckServiceUserCase {
+
+interface CheckServiceMultipleUserCase {
     execute(url:string):Promise<boolean>
 }
 
 type SuccessCallback = (() => void) | undefined;
 type ErrorCallback = ((error: string) => void) | undefined;
 
-export class CheckService implements CheckServiceUserCase {
+export class CheckServiceMultiple implements CheckServiceMultipleUserCase {
 
     constructor(
-        private readonly logRepository: LogRepository,
+        private readonly logRepository: LogRepository[],
         private readonly successCallback: SuccessCallback, 
         private readonly errorCallback: ErrorCallback
-    ){
+    ){}
 
+    private callLogs(log: LogModel){
+        this.logRepository.forEach(logRepository => {
+            logRepository.saveLog(log);
+        });
     }
 
     public async execute(url:string):Promise<boolean> {
@@ -29,7 +34,7 @@ export class CheckService implements CheckServiceUserCase {
                 level: e_LogSeverityLevel.low,
                 origin: 'check-service.ts'    
             });
-           this.logRepository.saveLog(log);
+           this.callLogs(log);
            this.successCallback && this.successCallback();
            return true;
 
@@ -40,7 +45,7 @@ export class CheckService implements CheckServiceUserCase {
                 level: e_LogSeverityLevel.high,
                 origin: 'check-service.ts'
             });
-            this.logRepository.saveLog(log);
+            this.callLogs(log);
             this.errorCallback && this.errorCallback(errorMessage);
             return false;
         }
